@@ -1,0 +1,10 @@
+node_modules/
+dist/
+release/
+APPLICATION_LOGIC.md
+.env
+.env.*
+*.log
+dev/.check-*/
+.DS_Store
+Thumbs.db
