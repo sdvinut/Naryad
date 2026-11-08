@@ -8,7 +8,7 @@ const fixture = new URL('../dev/fixture-import.json', import.meta.url);
 test('импорт берёт только известные коды, остальные пропускает', { skip: !fs.existsSync(fixture) }, () => {
   const { project, skipped } = projectFromImport(JSON.parse(fs.readFileSync(fixture, 'utf8')));
   assert.deepEqual(skipped, { З: 2, ОСВ: 7, П: 7, К: 21 });
-  assert.deepEqual(project.settings.statuses.map((s) => s.code), ['У', 'Г', 'РГ', '×']);
+  assert.deepEqual(project.settings.statuses.map((s) => s.code), ['У', 'Г', 'РГ', '×', 'Л']);
   const codes = new Set(Object.values(project.cells).flatMap((row) => Object.values(row).map((c) => c.c)));
   assert.deepEqual([...codes].sort(), ['ДТП', 'ЗН ДТП', 'ЗН Р', 'Р', 'РГ', 'У', 'Г'].sort());
   // порядок — как на листе «График»
@@ -23,7 +23,7 @@ test('старый проект: отметки из Excel удаляются в
     settings: { statuses: [{ code: 'У', name: 'Увольнение', color: '#10b981', blocks: true }, { code: 'К', name: 'Код «К» из Excel', color: '#facc15', blocks: true, imported: true }] },
   };
   const p = normalizeProject(old);
-  assert.deepEqual(p.settings.statuses.map((s) => s.code), ['У']);
+  assert.deepEqual(p.settings.statuses.map((s) => s.code), ['У', 'Г', 'РГ', '×', 'Л']);
   assert.deepEqual(p.cells.a, { '2026-10-02': { c: 'Р' }, '2026-10-03': { c: 'У' } });
 });
 

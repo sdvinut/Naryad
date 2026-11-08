@@ -545,7 +545,10 @@ input[type='number'] { font-variant-numeric: tabular-nums; }
 
 .settings-body { min-height: 380px; }
 .people { display: flex; flex-direction: column; gap: 6px; }
-.people-head, .people-row { display: grid; grid-template-columns: 22px 1fr 120px 108px 72px 72px 56px 36px; gap: 8px; align-items: center; }
+.people-head, .people-row { display: grid; grid-template-columns: 22px 1fr 120px 108px 72px 72px 92px 56px 36px; gap: 8px; align-items: center; }
+.duty-bans { display: flex; gap: 4px; }
+.duty-bans button { flex: 1; min-width: 0; height: 30px; padding: 0 4px; border: 1px solid var(--border); border-radius: 7px; color: var(--dim); font-size: 10px; font-weight: 700; }
+.duty-bans button.on { border-color: rgba(251, 113, 133, 0.5); background: rgba(251, 113, 133, 0.14); color: #fda4af; }
 .role-btn { height: 36px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.04); color: var(--muted); font-size: 12px; font-weight: 600; }
 .role-btn.dj { border-color: rgba(167, 139, 250, 0.55); background: rgba(124, 92, 255, 0.16); color: #ddd2ff; }
 .role-tag { margin-left: 6px; padding: 1px 5px; border-radius: 5px; font-size: 9.5px; font-weight: 700; letter-spacing: 0.02em; color: #c4b5fd; background: rgba(124, 92, 255, 0.16); border: 1px solid rgba(167, 139, 250, 0.35); flex: none; }

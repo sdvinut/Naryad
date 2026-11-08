@@ -120,6 +120,7 @@ export function plan(project, opts = {}) {
   // ---------- исходное состояние людей ----------
   const pidx = new Map(persons.map((p, i) => [p.id, i]));
   const isDj = persons.map((p) => roleOf(p) === 'dj');
+  const forbidden = persons.map((p) => new Set(p.forbiddenDuties || []));
   const occ = persons.map((p) => new Set(Object.keys(base.cells[p.id] || {}).map(toNum)));
   const fixedIv = persons.map(() => []);
   const fixedByPid = new Map();
@@ -215,6 +216,7 @@ export function plan(project, opts = {}) {
 
   function fitsBase(st, i, k, rest) {
     const sl = slots[k];
+    if (forbidden[i].has(sl.dutyId)) return false;
     if (sl.role === 'dj' ? !isDj[i] : sl.role === 'dn' ? isDj[i] : isDj[i] && (st.djUsed.get(sl.capKey) || 0) >= sl.djCap) return false;
     const { s, e } = sl;
     const o = occ[i], po = st.pocc[i];

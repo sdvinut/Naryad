@@ -136,7 +136,7 @@ function createWindow() {
   if (PERF_OUT) {
     win.webContents.once('did-finish-load', () => setTimeout(async () => {
       const probe = fs.readFileSync(path.join(__dirname, '..', 'dev', PROBE), 'utf8');
-      const result = await win.webContents.executeJavaScript(probe).catch((err) => { console.error('probe failed:', err.message); app.exit(3); });
+      const result = await win.webContents.executeJavaScript(probe).catch((err) => { console.error('probe failed:', err.stack || err.message); app.exit(3); });
       if (!result) return;
       const info = await app.getGPUInfo('basic').catch(() => ({}));
       result.push({ name: 'gpu', backend, devices: (info.gpuDevice || []).map((g) => g.deviceString).filter(Boolean) });

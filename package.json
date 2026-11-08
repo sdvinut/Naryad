@@ -1,7 +1,7 @@
 {
   "name": "naryady",
   "productName": "Наряды",
-  "version": "1.6.0",
+  "version": "1.1.0",
   "description": "Честное распределение нарядов роты",
   "main": "electron/main.cjs",
   "private": true,

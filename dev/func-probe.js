@@ -14,7 +14,7 @@
   empty.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }));
   window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
   await waitFor(() => document.querySelector('.cell-menu'));
-  check('в меню клетки только свои отметки', document.querySelectorAll('.cell-menu .status-chip').length === 4, [...document.querySelectorAll('.cell-menu .status-chip b')].map((x) => x.textContent).join(' '));
+  check('в меню клетки только свои отметки', document.querySelectorAll('.cell-menu .status-chip').length === 5, [...document.querySelectorAll('.cell-menu .status-chip b')].map((x) => x.textContent).join(' '));
   window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
   await wait(300);
   check('таблица открылась', document.querySelectorAll('.row[data-ri]').length === 24, document.querySelectorAll('.row[data-ri]').length);
@@ -64,6 +64,9 @@
   down(cellEl(pri, pd)); over(cellEl(pri, pd2)); up();
   await waitFor(() => document.querySelector('.selbar'));
   key('2');
+  const applyDuration = await waitFor(() => btn('Проставить'));
+  check('Г запрашивает количество дней', !!applyDuration);
+  applyDuration.click();
   check('Г поверх нарядов — подбор замены', await waitFor(() => document.querySelectorAll('.v-assign').length), [...document.querySelectorAll('.v-assign .va-name')].map((x) => x.textContent).join(', '));
   document.querySelector('.plan-head .icon-btn').click();
   await wait(300);

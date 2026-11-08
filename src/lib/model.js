@@ -23,7 +23,10 @@ export const DEFAULT_STATUSES = [
   { code: 'Г', name: 'Госпиталь', color: '#f43f5e', blocks: true },
   { code: 'РГ', name: 'Рабочая группа', color: '#38bdf8', blocks: true },
   { code: '×', name: 'Не ставить', color: '#64748b', blocks: true, print: '' },
+  { code: 'Л', name: 'Лазарет', color: '#eab308', blocks: true },
 ];
+
+export const statusNeedsDuration = (code) => code === 'Г' || code === 'Л';
 
 export const DEFAULT_SETTINGS = {
   title: 'График нарядов роты',
@@ -68,6 +71,7 @@ export function normalizeProject(p) {
   s.signatures = { ...DEFAULT_SETTINGS.signatures, ...(p.settings?.signatures || {}) };
   s.print = { ...DEFAULT_SETTINGS.print, ...(p.settings?.print || {}) };
   s.constraints = { ...DEFAULT_SETTINGS.constraints, ...(p.settings?.constraints || {}) };
+  for (const st of DEFAULT_STATUSES) if (!s.statuses.some((x) => x.code === st.code)) s.statuses.push({ ...st });
   // до появления ролей: ротный наряд — 1 дежурный + 2 дневальных, в технопарке не больше одного дежурного
   s.duties = s.duties.map((d) => {
     if ('djMax' in d) return d;
@@ -79,7 +83,12 @@ export function normalizeProject(p) {
   if (!p.settings?.groups?.length) s.groups = [{ id: 'g1', name: p.settings?.print?.section || '24 призыв', auto: true }];
   delete s.print.section;
   const gids = new Set(s.groups.map((g) => g.id));
-  const persons = (p.persons || []).map((x) => (gids.has(x.group) ? x : { ...x, group: s.groups[0].id }));
+  const dutyIds = new Set(s.duties.map((d) => d.id));
+  const persons = (p.persons || []).map((x) => ({
+    ...x,
+    group: gids.has(x.group) ? x.group : s.groups[0].id,
+    forbiddenDuties: [...new Set(Array.isArray(x.forbiddenDuties) ? x.forbiddenDuties : [])].filter((id) => dutyIds.has(id)),
+  }));
   const pids = new Set(persons.map((x) => x.id));
   for (const kind of ['together', 'apart']) {
     s.constraints[kind] = (Array.isArray(s.constraints[kind]) ? s.constraints[kind] : []).map((rule) => ({

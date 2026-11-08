@@ -212,3 +212,22 @@ test('наказание не входит в нагрузку и сохраня
     'человек продолжает участвовать в распределении');
   checkRules(next, from, to, rebuilt.variants[0]);
 });
+
+test('персональные запреты исключают ротный наряд и ДТП при генерации', { skip: !hasFixture }, () => {
+  const base = load();
+  const noR = base.persons[0].id, noDtp = base.persons[8].id;
+  const project = {
+    ...base,
+    persons: base.persons.map((p) => ({
+      ...p,
+      forbiddenDuties: p.id === noR ? ['R'] : p.id === noDtp ? ['DTP'] : [],
+    })),
+  };
+  const res = plan(project, { from: '2026-11-01', to: '2026-11-30', seed: 41 });
+  for (const v of res.variants) {
+    assert.equal(v.unfilled.length, 0);
+    assert.ok(v.assignments.every((a) => a.pid !== noR || a.dutyId !== 'R'));
+    assert.ok(v.assignments.every((a) => a.pid !== noDtp || a.dutyId !== 'DTP'));
+    checkRules(applyVariant(project, res, v), '2026-11-02', '2026-11-30', v);
+  }
+});

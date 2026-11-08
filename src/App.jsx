@@ -8,7 +8,7 @@ import { api, isDesktop } from './api.js';
 import { historyReducer, initialHistory } from './lib/store.js';
 import {
   normalizeProject, extractNaryads, computeLoads, applyStatus, diffCells, projectFromImport, setCells,
-  naryadCells, clearNaryadCells, emptyProject, naryadLength, movePerson, autoPids, importInto,
+  naryadCells, clearNaryadCells, emptyProject, naryadLength, movePerson, autoPids, importInto, statusNeedsDuration,
 } from './lib/model.js';
 import { applyVariant } from './lib/planner.js';
 import { planMany } from './lib/planAsync.js';
@@ -16,7 +16,7 @@ import { todayIso, monthKey, shiftMonth, monthDays, monthTitle, addDays, range, 
 import Grid from './components/Grid.jsx';
 import CellMenu from './components/CellMenu.jsx';
 import SidePanel from './components/SidePanel.jsx';
-import { RemoveModal, ImportModal, ExportModal, SettingsModal } from './components/Modals.jsx';
+import { RemoveModal, ImportModal, ExportModal, SettingsModal, StatusDurationModal } from './components/Modals.jsx';
 import SelectionBar from './components/SelectionBar.jsx';
 import { Button, IconButton, Toasts, softSpring } from './components/ui.jsx';
 
@@ -186,10 +186,15 @@ export default function App() {
 
   // ---------- действия с клетками ----------
   const actions = {
-    setStatus: (pid, from, to, code) => {
+    setStatus: (pid, from, to, code, daysForward = null) => {
       setMenu(null);
+      if (statusNeedsDuration(code) && daysForward === null) {
+        setModal({ type: 'statusDuration', status: { pid, from, to, code } });
+        return;
+      }
+      const end = daysForward === null ? to : addDays(from, daysForward - 1);
       const st = project.settings.statuses.find((s) => s.code === code);
-      const { project: temp, removed } = applyStatus(project, pid, from, to, code);
+      const { project: temp, removed } = applyStatus(project, pid, from, end, code);
       if (!removed.length) { commit(temp); return; }
       startReplacement(temp, removed, `${nameOf(pid)}: ${st?.name?.toLowerCase() || code}`);
     },
@@ -199,6 +204,11 @@ export default function App() {
     },
     placeDuty: (pid, d, duty) => {
       setMenu(null);
+      const person = project.persons.find((p) => p.id === pid);
+      if (person?.forbiddenDuties?.includes(duty.id)) {
+        toast({ title: 'Наряд запрещён для этого человека', text: `${person.name}: настройка «Нельзя ${duty.code}». Изменить её можно в «Настройки → Люди».`, kind: 'warn' });
+        return;
+      }
       const len = naryadLength(duty, d);
       const busy = range(d, addDays(d, len)).filter((x) => project.cells[pid]?.[x]);
       if (busy.length) { toast({ title: 'Клетки заняты', text: `У ${nameOf(pid)} уже есть отметки на ${busy.map(fmtShort).join(', ')}`, kind: 'warn' }); return; }
@@ -269,21 +279,27 @@ export default function App() {
 
   // Залить выделенные клетки отметкой (code) или очистить (null).
   // Если под заливку попали наряды — они снимаются и сразу подбирается замена.
-  const applyToSelection = (code) => {
+  const applyToSelection = (code, daysForward = null) => {
     if (!sel || !project) return;
+    if (statusNeedsDuration(code) && daysForward === null) {
+      const from = sel.ranges.map((r) => r.d0).sort()[0];
+      setModal({ type: 'statusDuration', status: { code, from }, selection: sel });
+      return;
+    }
     const st = project.settings.statuses.find((x) => x.code === code);
     let temp = project;
     const removed = [];
     const pids = new Set();
     let cellsN = 0;
     for (const r of sel.ranges) {
-      const n = range(r.d0, r.d1).length;
+      const end = daysForward === null ? r.d1 : addDays(r.d0, daysForward - 1);
+      const n = range(r.d0, end).length;
       for (let ri = r.r0; ri <= r.r1; ri++) {
         const pid = project.persons[ri]?.id;
         if (!pid) continue;
         pids.add(pid);
         cellsN += n;
-        const res = applyStatus(temp, pid, r.d0, r.d1, code);
+        const res = applyStatus(temp, pid, r.d0, end, code);
         temp = res.project;
         for (const x of res.removed) if (!removed.some((m) => m.id === x.id)) removed.push(x);
       }
@@ -523,6 +539,17 @@ export default function App() {
           if (!removed.some((r) => r.id === n.id)) removed.push(n);
           const cleaned = setCells(temp, n.cellDays.filter((d) => d < from || d > to).map((d) => ({ pid: n.pid, d, cell: null })));
           startReplacement(cleaned, removed, `${nameOf(n.pid)}: замена`);
+        }}
+      />
+      <StatusDurationModal
+        open={modal?.type === 'statusDuration'}
+        status={modal?.status}
+        onClose={() => setModal(null)}
+        onConfirm={(days) => {
+          const request = modal;
+          setModal(null);
+          if (request.selection) applyToSelection(request.status.code, days);
+          else actions.setStatus(request.status.pid, request.status.from, request.status.to, request.status.code, days);
         }}
       />
       <ImportModal open={modal?.type === 'import'} info={modal?.info} project={project} onClose={() => setModal(null)} onImport={(choices, mode) => doImport(modal.info, choices, mode)} />

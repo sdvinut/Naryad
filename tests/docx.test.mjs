@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
-import { projectFromImport, importInto } from '../src/lib/model.js';
+import { projectFromImport, importInto, setCells } from '../src/lib/model.js';
 import { buildPrintPayload } from '../src/lib/print.js';
 import { range } from '../src/lib/dates.js';
 
@@ -23,7 +23,8 @@ const loadBoth = () => importInto(null, [
 
 test('Word «как в Excel»: книжный лист в рамке, оба призыва, ГК, дата', { skip: !fs.existsSync(fixture) || !fs.existsSync(zimFixture) }, async () => {
   const project = loadBoth();
-  const payload = buildPrintPayload(project, range('2026-10-12', '2026-10-19'), opts(project, { dateIso: '2026-10-15' }));
+  const withLazaret = setCells(project, [{ pid: project.persons[0].id, d: '2026-10-15', cell: { c: 'Л' } }]);
+  const payload = buildPrintPayload(withLazaret, range('2026-10-12', '2026-10-19'), opts(project, { dateIso: '2026-10-15' }));
   const buf = await buildDocx(payload);
   fs.writeFileSync(new URL('../dev/test-week.docx', import.meta.url), buf);
   const zip = await JSZip.loadAsync(buf);
@@ -32,6 +33,7 @@ test('Word «как в Excel»: книжный лист в рамке, оба п
   assert.ok(Object.keys(zip.files).some((f) => f.startsWith('word/media/')), 'рамка-картинка');
   assert.match(xml, /behindDoc="1"/);
   for (const t of ['24 призыв', '23 призыв', 'Сотрудник 25', '12.окт', '16.окт', 'ГК - 6,16,29', '15 октября 2026 г.', 'И. Иванов', 'П. Петров', 'ЗН ДТП']) assert.ok(xml.includes(t), t);
+  assert.match(xml, />Л</, 'лазарет печатается буквой Л');
   // ГК — только над 16 октября
   assert.equal((xml.match(/>ГК</g) || []).length, 1);
   // нумерация внутри каждого призыва с 1: «16» — последний в 23 призыве, «24» — в 24 призыве

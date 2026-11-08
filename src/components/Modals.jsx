@@ -55,6 +55,31 @@ export function RemoveModal({ open, naryad, project, onClose, onConfirm }) {
   );
 }
 
+// ---------------- длительный статус ----------------
+
+export function StatusDurationModal({ open, status, onClose, onConfirm }) {
+  const [days, setDays] = useState(7);
+  useEffect(() => { if (open) setDays(7); }, [open]);
+  const value = Number(days);
+  const valid = Number.isInteger(value) && value >= 1 && value <= 365;
+  const name = status?.code === 'Л' ? 'Лазарет' : 'Госпиталь';
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={name}
+      subtitle="Проставить отметку на несколько дней"
+      width={440}
+      footer={<><Button onClick={onClose}>Отмена</Button><Button variant="primary" disabled={!valid} onClick={() => onConfirm(value)}>Проставить</Button></>}
+    >
+      <Field label="Сколько дней нужно проставить?">
+        <input autoFocus type="number" min="1" max="365" value={days} onChange={(e) => setDays(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && valid) onConfirm(value); }} />
+      </Field>
+      {status?.from && <p className="note">Отметка «{status.code}» будет проставлена на {value || 0} дн. начиная с {fmtHuman(status.from)}. Если затронуты наряды, программа предложит замену.</p>}
+    </Modal>
+  );
+}
+
 // ---------------- импорт ----------------
 
 export function ImportModal({ open, info, project, onClose, onImport }) {
@@ -326,6 +351,12 @@ function PersonRow({ p, duties, groups, setPerson, onDelete }) {
       {duties.map((d) => (
         <input key={d.id} type="number" min="0" value={p.carry?.[d.id] ?? 0} onChange={(e) => setPerson(p.id, { carry: { ...p.carry, [d.id]: Number(e.target.value) || 0 } })} />
       ))}
+      <div className="duty-bans">
+        {duties.map((d) => {
+          const banned = p.forbiddenDuties?.includes(d.id);
+          return <button key={d.id} type="button" className={banned ? 'on' : ''} title={`${banned ? 'Разрешить' : 'Запретить'}: ${d.name}`} onClick={() => setPerson(p.id, { forbiddenDuties: banned ? p.forbiddenDuties.filter((id) => id !== d.id) : [...(p.forbiddenDuties || []), d.id] })}>{d.code}</button>;
+        })}
+      </div>
       <Toggle checked={p.active !== false} onChange={(v) => setPerson(p.id, { active: v })} label="" />
       <button className="icon-btn danger" title="Удалить человека" onClick={onDelete}><Trash2 size={15} /></button>
     </Reorder.Item>
@@ -444,7 +475,7 @@ export function SettingsModal({ open, project, onClose, onSave, onPickOrder }) {
             <div className="people-head">
               <span /><span>Фамилия И.О.</span><span>Призыв</span><span>Роль</span>
               {s.duties.map((d) => <span key={d.id} title={`Нарядов «${d.code}» до начала таблицы (с прошлых месяцев)`}>{d.code} до таблицы</span>)}
-              <span>В нарядах</span><span />
+              <span title="Запретить автоматическую и ручную постановку">Нельзя</span><span>В нарядах</span><span />
             </div>
             <Reorder.Group as="div" axis="y" values={draft.persons} onReorder={(persons) => setDraft((d) => ({ ...d, persons }))} className="people-list">
               {draft.persons.map((p) => (
@@ -458,7 +489,7 @@ export function SettingsModal({ open, project, onClose, onSave, onPickOrder }) {
                 />
               ))}
             </Reorder.Group>
-            <Button icon={Plus} onClick={() => setDraft({ ...draft, persons: [...draft.persons, { id: newId(), name: 'Новый Н.Н.', carry: {}, active: true, group: s.groups[0].id }] })}>Добавить человека</Button>
+            <Button icon={Plus} onClick={() => setDraft({ ...draft, persons: [...draft.persons, { id: newId(), name: 'Новый Н.Н.', carry: {}, forbiddenDuties: [], active: true, group: s.groups[0].id }] })}>Добавить человека</Button>
             <p className="note">«До таблицы» — сколько нарядов было до первого дня в таблице. Учитывается при подсчёте честности. Выключенный человек не ставится в наряды, но остаётся в графике.</p>
           </div>
         )}
